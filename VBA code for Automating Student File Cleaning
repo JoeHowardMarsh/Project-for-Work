@@ -1,0 +1,112 @@
+
+' Note: This code is used for HESA's only, not FECs
+
+' 1. Make sure to first make copies of the real files so to not overwrite any data present in the columns
+
+' 2. The first subprocedure makes sure that the first worksheet is the one selected (the one containing the student data)
+
+' 3. The second subprocedure checks the SID lengths of every SID in a given file and notifies whether they are acceptable or not (either 0, 13 or 17) - up to 9999 rows
+'       the reason I coded it this way is to account for empty rows that sometimes occur inbetween rows with student data in them
+
+' 4. The final subprocedures check if the Welsh or Closed Course Identifier or NHS columns contain anything other than 1 or blank ""
+
+
+Sub ActivateSheet()
+
+Worksheets(1).Activate
+
+End Sub
+
+' checks the SID lengths of every SID in a given file
+
+Sub CheckIfSID_LenAcceptable()
+
+' First selects the starting position at which to run the =LEN( Function
+' Then selects the range from which we want to run this function down to (B9999) to make sure all possible SIDs are tested
+
+    Range("B12").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.NumberFormat = "General"
+    Range("B12").Select
+    Application.CutCopyMode = False
+    ActiveCell.FormulaR1C1 = "=LEN(RC[-1])"
+    Range("B12").Select
+    Selection.AutoFill Destination:=Range("B12:B9999")
+    Range("B12:B9999").Select
+
+
+' The following section checks the results of this formula and provides 1 of 2 message boxes.
+' Either, "No invalid SIDs found!" if all SID's are acceptable or "Invalid SID in cell:.." and provides the first cell with an invalid SID
+
+
+Dim cell As Range
+Dim invalidCell As Range
+Dim ValidSID As Boolean
+    
+    For Each cell In Range("B12:B9999")
+        If cell.Value <> 0 And cell.Value <> 13 And cell.Value <> 17 Then
+            Set invalidCell = cell
+            ValidSID = False
+            Exit For
+        End If
+    Next
+    
+    If ValidSID Then
+    Else
+        If Not invalidCell Is Nothing Then
+            MsgBox "Invalid SID in cell: " & invalidCell.Address
+        Else
+            MsgBox "No invalid SIDs found!"
+        End If
+    End If
+End Sub
+
+
+
+
+' Reactivating sheet selection here to make sure correct sheet is active
+
+Sub ActivateSheet_again()
+
+Worksheets(1).Activate
+
+End Sub
+
+
+' check if the Welsh or Closed Course Identifier or NHS columns contain anything other than 1 or blank
+
+
+Sub checkColumns()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim checkColumns As Variant
+    Dim col As Variant
+    Dim i As Long
+
+    ' Set the worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change "Sheet1" to your actual sheet name
+
+    ' Define columns to check
+    checkColumns = Array("K", "Y", "AA")
+
+    ' Loop through each column
+    For Each col In checkColumns
+        ' Find the last row with data or up to row 9999 in the column
+        lastRow = WorksheetFunction.Min(ws.Cells(ws.Rows.Count, col).End(xlUp).Row, 9999)
+
+        ' Loop through each row starting from row 12
+        For i = 12 To lastRow
+            ' Check if the cell value is not blank and not equal to '1'
+            If ws.Cells(i, col).Value <> "" And ws.Cells(i, col).Value <> "1" Then
+                ' If a value other than blank or '1' is found, display a message and exit the loop
+                MsgBox "Column " & col & " has a value other than blank or '1' in row " & i, vbExclamation
+                Exit Sub
+            End If
+        Next i
+    Next col
+
+    ' If no issues are found, display a success message
+    MsgBox "No issues found in columns K, Y, and AA.", vbInformation
+End Sub
+
+
